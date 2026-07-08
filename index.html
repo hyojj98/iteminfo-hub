@@ -16,8 +16,9 @@
   select { padding:10px; border:1px solid var(--bd); border-radius:8px; font-size:14px; }
   .count { color:var(--mut); font-size:13px; white-space:nowrap; }
   .wrap { overflow-x:auto; padding:0 18px 40px; }
-  table { border-collapse:collapse; width:100%; font-size:13px; background:#fff; }
-  th, td { border:1px solid var(--bd); padding:7px 9px; text-align:left; vertical-align:top; white-space:pre-wrap; }
+  table { border-collapse:collapse; width:100%; font-size:13px; background:#fff; table-layout:fixed; }
+  th, td { border:1px solid var(--bd); padding:7px 9px; text-align:left; vertical-align:top;
+           white-space:pre-wrap; word-break:break-word; }
   th { background:#f1f5f9; position:sticky; top:0; cursor:pointer; user-select:none; }
   tbody tr:nth-child(even){ background:#fafbfc; }
   mark { background:#fde68a; padding:0 1px; }
@@ -76,14 +77,14 @@
 function init(){
 const DATA = window.ITEM_DATA || {columns:[], rows:[]};
 const COLS = [
-  {key:"code",  label:"품목코드"},
-  {key:"name",  label:"품목명"},
-  {key:"form",  label:"제형"},
-  {key:"criteria", label:"기능성 기준"},
-  {key:"approved", label:"이미 심사받은 제품명"},
-  {key:"status", label:"품목상태"},
-  {key:"content_code", label:"내용물코드"},
-  {key:"content_name", label:"내용물명"},
+  {key:"code",  label:"품목코드", w:"105px"},
+  {key:"name",  label:"품목명", w:"320px"},
+  {key:"form",  label:"제형", w:"90px"},
+  {key:"criteria", label:"기능성 기준", w:"150px"},
+  {key:"approved", label:"이미 심사받은 제품명", w:"130px"},
+  {key:"status", label:"품목상태", w:"64px"},
+  {key:"content_code", label:"내용물코드", w:"120px"},
+  {key:"content_name", label:"내용물명", w:"300px"},
 ];
 const NONFUNC = new Set(["", "-", "_", "None"]);
 function isFunc(crit){
@@ -104,9 +105,11 @@ const colInputs={};
 COLS.forEach(c=>{
   const th=document.createElement("th"); th.textContent=c.label+" ▲▼";
   th.title="클릭하면 이 열로 정렬";
+  if(c.w) th.style.width=c.w;
   th.onclick=()=>{ if(sortKey===c.key){sortAsc=!sortAsc;} else {sortKey=c.key;sortAsc=true;} render(); };
   head.appendChild(th);
   const fth=document.createElement("th");
+  if(c.w) fth.style.width=c.w;
   const inp=document.createElement("input");
   inp.type="search"; inp.placeholder=c.label+" 검색";
   inp.addEventListener("input", render);
