@@ -26,10 +26,12 @@
   .none { color:#94a3b8; }
   .empty { text-align:center; color:var(--mut); padding:40px; }
   .hint { color:var(--mut); font-size:12px; flex:1; min-width:180px; }
-  #clearBtn, #dlBtn, #xlsxBtn { padding:9px 12px; border:1px solid var(--bd); border-radius:8px; background:#fff; cursor:pointer; font-size:13px; }
-  #clearBtn:hover, #dlBtn:hover { background:#f1f5f9; }
-  #xlsxBtn { border-color:#16a34a; color:#fff; background:#16a34a; font-weight:600; }
-  #xlsxBtn:hover { background:#15803d; }
+  #clearBtn, #xlsxAll, #xlsxHit { padding:9px 12px; border:1px solid var(--bd); border-radius:8px; background:#fff; cursor:pointer; font-size:13px; transition:.12s ease; }
+  #clearBtn:hover { background:#f1f5f9; }
+  #xlsxAll { border-color:#16a34a; color:#fff; background:#16a34a; font-weight:600; box-shadow:0 1px 3px rgba(22,163,74,.35); }
+  #xlsxAll:hover { background:#15803d; }
+  #xlsxHit { border-color:#16a34a; color:#15803d; background:#f0fdf4; font-weight:600; }
+  #xlsxHit:hover { background:#dcfce7; }
   #head th { top:0; }
   #filterRow th { position:sticky; top:33px; background:#f8fafc; padding:3px; }
   #filterRow input { width:100%; min-width:0; box-sizing:border-box; padding:5px 6px; border:1px solid #cbd5e1;
@@ -44,9 +46,7 @@
   .badge.ok   { background:#dcfce7; color:#15803d; }
   .badge.dead { background:#e2e8f0; color:#64748b; }
   .badge.other{ background:#fef9c3; color:#a16207; }
-  #clearBtn, #dlBtn, #xlsxBtn { transition:.12s ease; }
-  #clearBtn:hover, #dlBtn:hover, #xlsxBtn:hover { transform:translateY(-1px); box-shadow:0 2px 6px rgba(0,0,0,.10); }
-  #xlsxBtn { box-shadow:0 1px 3px rgba(22,163,74,.35); }
+  #clearBtn:hover, #xlsxAll:hover, #xlsxHit:hover { transform:translateY(-1px); box-shadow:0 2px 6px rgba(0,0,0,.12); }
 </style>
 </head>
 <body>
@@ -61,8 +61,8 @@
       <option value="none">비기능성만</option>
     </select>
     <button id="clearBtn" type="button">검색 초기화</button>
-    <button id="xlsxBtn" type="button">⬇ 엑셀 다운로드(.xlsx)</button>
-    <button id="dlBtn" type="button">검색결과 CSV</button>
+    <button id="xlsxAll" type="button">⬇ 엑셀(전체)</button>
+    <button id="xlsxHit" type="button">⬇ 엑셀(검색결과)</button>
     <span class="count" id="count"></span>
   </div>
 </header>
@@ -174,29 +174,7 @@ function render(){
   document.getElementById("count").textContent =
      `${rows.length}건${rows.length>1000?" (1000건만 표시)":""}`;
 }
-// 엑셀 다운로드: 현재 검색결과를 '한 셀에 한 값'(내용물코드마다 행 분리)으로 CSV 저장
-function csvCell(v){ v=String(v==null?"":v); return /[",\n\r]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v; }
-function downloadCSV(){
-  const base=COLS.filter(c=>c.key!=="content_code"&&c.key!=="content_name");
-  const lines=[ base.map(c=>c.label).concat(["내용물코드","내용물명"]).map(csvCell).join(",") ];
-  lastRows.forEach(r=>{
-    const codes=(r.content_codes&&r.content_codes.length)?r.content_codes:[""];
-    const names=r.content_names||[];
-    codes.forEach((code,i)=>{
-      lines.push( base.map(c=>csvCell(r[c.key]||"")).concat([csvCell(code),csvCell(names[i]||"")]).join(",") );
-    });
-  });
-  const csv="﻿"+lines.join("\r\n");
-  const blob=new Blob([csv],{type:"text/csv;charset=utf-8"});
-  const d=new Date(), pad=n=>String(n).padStart(2,"0");
-  const a=document.createElement("a");
-  a.href=URL.createObjectURL(blob);
-  a.download=`품목정보_${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}.csv`;
-  a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
-}
-document.getElementById("dlBtn").addEventListener("click", downloadCSV);
-
-// 엑셀(.xlsx) 다운로드: 브라우저에서 ExcelJS로 직접 생성(서식 포함, 전체 데이터)
+// 엑셀(.xlsx) 다운로드: 브라우저에서 ExcelJS로 직접 생성(서식 포함). 전체/검색결과 두 가지.
 function loadExcelJS(){
   return new Promise((res,rej)=>{
     if(window.ExcelJS) return res();
@@ -206,29 +184,20 @@ function loadExcelJS(){
     document.head.appendChild(s);
   });
 }
-const XLSX_COLS=[
-  {h:"품목코드", k:"code", w:14},
-  {h:"품목명", k:"name", w:71.25},
-  {h:"제형", k:"form", w:14.5},
-  {h:"기능성 기준", k:"criteria", w:31.6},
-  {h:"이미 삼사받은 품목의 제품명", k:"approved", w:36.75},
-  {h:"품목상태", k:"status", w:9},
-  {h:"내용물코드", k:"__code", w:15.25},
-  {h:"내용물명", k:"__name", w:40},
-];
-async function downloadXLSX(){
-  const btn=document.getElementById("xlsxBtn"), old=btn.textContent;
-  btn.textContent="엑셀 만드는 중…"; btn.disabled=true;
+const XLSX_W=[14,71.25,14.5,31.6,36.75,9,15.25,40];
+const XLSX_H=["품목코드","품목명","제형","기능성 기준","이미 삼사받은 품목의 제품명","품목상태","내용물코드","내용물명"];
+async function makeXLSX(rows, label, btn){
+  const old=btn.textContent; btn.textContent="엑셀 만드는 중…"; btn.disabled=true;
   try{
     await loadExcelJS();
     const wb=new ExcelJS.Workbook();
     const ws=wb.addWorksheet("품목정보", {views:[{state:"frozen", ySplit:1, zoomScale:85, zoomScaleNormal:85}]});
-    ws.columns=XLSX_COLS.map(c=>({header:c.h, width:c.w}));
+    ws.columns=XLSX_H.map((h,i)=>({header:h, width:XLSX_W[i]}));
     const hr=ws.getRow(1); hr.height=33;
     hr.eachCell(c=>{ c.font={name:"맑은 고딕",size:11,bold:true};
       c.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FFC8E4F3"}};
       c.alignment={horizontal:"left",vertical:"middle"}; });
-    DATA.rows.forEach(r=>{
+    rows.forEach(r=>{
       const codes=(r.content_codes&&r.content_codes.length)?r.content_codes:[""];
       const names=r.content_names||[];
       codes.forEach((code,i)=>{
@@ -241,12 +210,13 @@ async function downloadXLSX(){
     const blob=new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
     const d=new Date(), pad=n=>String(n).padStart(2,"0");
     const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
-    a.download=`품목정보_${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}.xlsx`;
+    a.download=`품목정보_${label}_${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}.xlsx`;
     a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1500);
   }catch(e){ alert("엑셀 생성 실패: "+e.message); }
   finally{ btn.textContent=old; btn.disabled=false; }
 }
-document.getElementById("xlsxBtn").addEventListener("click", downloadXLSX);
+document.getElementById("xlsxAll").addEventListener("click", e=>makeXLSX(DATA.rows, "전체", e.currentTarget));
+document.getElementById("xlsxHit").addEventListener("click", e=>makeXLSX(lastRows, "검색결과", e.currentTarget));
 document.getElementById("filterFunc").addEventListener("change", render);
 document.getElementById("clearBtn").addEventListener("click", ()=>{
   COLS.forEach(c=>colInputs[c.key].value=""); document.getElementById("filterFunc").value="all"; render();
