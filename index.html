@@ -38,7 +38,6 @@
                      border-radius:5px; font-size:12px; font-weight:normal; -webkit-appearance:none; appearance:none; }
   #filterRow input:focus { outline:2px solid var(--accent); border-color:var(--accent); }
   /* ── 미적 포인트 ── */
-  .accent-bar { flex:none; height:4px; background:linear-gradient(90deg,#2563eb,#06b6d4,#22c55e); }
   h1 { display:flex; align-items:center; gap:8px; font-size:20px; letter-spacing:-.02em; }
   .meta { color:#475569; font-size:12px; font-weight:500; background:#f1f5f9; padding:2px 10px; border-radius:999px; }
   tbody tr:hover td { background:#eff6ff; }
@@ -47,14 +46,20 @@
   .badge.dead { background:#e2e8f0; color:#64748b; }
   .badge.other{ background:#fef9c3; color:#a16207; }
   #clearBtn:hover, #xlsxAll:hover, #xlsxHit:hover { transform:translateY(-1px); box-shadow:0 2px 6px rgba(0,0,0,.12); }
+  /* 셀 클릭 복사 */
+  tbody td { cursor:pointer; }
+  tbody td.flash { background:#bfdbfe !important; }
+  #toast { position:fixed; bottom:22px; left:50%; transform:translateX(-50%) translateY(20px);
+           background:#0f172a; color:#fff; padding:8px 16px; border-radius:8px; font-size:13px;
+           opacity:0; pointer-events:none; transition:.2s ease; z-index:50; }
+  #toast.show { opacity:.95; transform:translateX(-50%) translateY(0); }
 </style>
 </head>
 <body>
-<div class="accent-bar"></div>
 <header>
   <h1>✔️ 품목정보 <span class="meta" id="meta"></span></h1>
   <div class="controls">
-    <span class="hint">각 열 제목 아래 칸에 입력하면 그 항목만 검색됩니다 (여러 칸 동시 사용=AND).</span>
+    <span class="hint">열 제목 아래 칸에 입력해 검색(여러 칸=AND) · <b>셀을 클릭하면 값이 복사</b>돼요.</span>
     <select id="filterFunc">
       <option value="all">기능성: 전체</option>
       <option value="func">기능성만</option>
@@ -76,6 +81,7 @@
   </table>
   <div class="empty" id="empty" style="display:none">검색 결과가 없습니다.</div>
 </div>
+<div id="toast">복사됨 ✓</div>
 
 <!-- 데이터는 Supabase 공개 URL에서 실시간으로 불러옴(발행하면 자동 최신). 로컬 파일이 있으면 그걸 우선 사용. -->
 <script>
@@ -220,6 +226,20 @@ document.getElementById("xlsxHit").addEventListener("click", e=>makeXLSX(lastRow
 document.getElementById("filterFunc").addEventListener("change", render);
 document.getElementById("clearBtn").addEventListener("click", ()=>{
   COLS.forEach(c=>colInputs[c.key].value=""); document.getElementById("filterFunc").value="all"; render();
+});
+// 셀 클릭 → 값 복사 (드래그로 선택 중이면 복사 안 함)
+const toast=document.getElementById("toast"); let toastT;
+document.getElementById("body").addEventListener("click", e=>{
+  const td=e.target.closest("td"); if(!td) return;
+  if(String(window.getSelection?window.getSelection():"").length>0) return;
+  const text=(td.innerText||"").trim(); if(!text) return;
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(()=>{
+      td.classList.add("flash"); setTimeout(()=>td.classList.remove("flash"),300);
+      toast.classList.add("show"); clearTimeout(toastT);
+      toastT=setTimeout(()=>toast.classList.remove("show"),900);
+    }).catch(()=>{});
+  }
 });
 render();
 }
