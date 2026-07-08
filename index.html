@@ -82,7 +82,7 @@ const COLS = [
   {key:"form",  label:"제형", w:"120px"},
   {key:"criteria", label:"기능성 기준", w:"210px"},
   {key:"approved", label:"이미 심사받은 제품명", w:"130px"},
-  {key:"status", label:"품목상태", w:"64px"},
+  {key:"status", label:"품목상태", w:"88px"},
   {key:"content_code", label:"내용물코드", w:"120px"},
   {key:"content_name", label:"내용물명", w:"300px"},
 ];
@@ -102,9 +102,10 @@ document.getElementById("meta").textContent = `(총 ${DATA.count||DATA.rows.leng
 const head=document.getElementById("head");
 const filterRow=document.getElementById("filterRow");
 const colInputs={};
+const colTh={};
 COLS.forEach(c=>{
-  const th=document.createElement("th"); th.textContent=c.label+" ▲▼";
-  th.title="클릭하면 이 열로 정렬";
+  const th=document.createElement("th"); th.textContent=c.label;
+  th.title="클릭하면 이 열로 정렬"; colTh[c.key]=th;
   if(c.w) th.style.width=c.w;
   th.onclick=()=>{ if(sortKey===c.key){sortAsc=!sortAsc;} else {sortKey=c.key;sortAsc=true;} render(); };
   head.appendChild(th);
@@ -121,6 +122,8 @@ function hl(s, q){ s=esc(s); if(!q) return s;
   try{ return s.replace(new RegExp("("+q.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+")","ig"),"<mark>$1</mark>"); }catch(e){ return s; } }
 
 function render(){
+  // 정렬 화살표는 현재 정렬 중인 열에만 표시 (헤더 두줄 방지)
+  COLS.forEach(c=>{ colTh[c.key].textContent = c.label + (sortKey===c.key ? (sortAsc?" ▴":" ▾") : ""); });
   const ff=document.getElementById("filterFunc").value;
   // 각 열별 검색어 수집 (빈 칸은 무시)
   const terms={};
