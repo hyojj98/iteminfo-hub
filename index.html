@@ -26,10 +26,10 @@
   .none { color:#94a3b8; }
   .empty { text-align:center; color:var(--mut); padding:40px; }
   .hint { color:var(--mut); font-size:12px; flex:1; min-width:180px; }
-  #clearBtn, #dlBtn { padding:9px 12px; border:1px solid var(--bd); border-radius:8px; background:#fff; cursor:pointer; font-size:13px; }
-  #clearBtn:hover { background:#f1f5f9; }
-  #dlBtn { border-color:#16a34a; color:#16a34a; font-weight:600; }
-  #dlBtn:hover { background:#f0fdf4; }
+  #clearBtn, #dlBtn, #xlsxBtn { padding:9px 12px; border:1px solid var(--bd); border-radius:8px; background:#fff; cursor:pointer; font-size:13px; }
+  #clearBtn:hover, #dlBtn:hover { background:#f1f5f9; }
+  #xlsxBtn { border-color:#16a34a; color:#fff; background:#16a34a; font-weight:600; }
+  #xlsxBtn:hover { background:#15803d; }
   #head th { top:0; }
   #filterRow th { position:sticky; top:33px; background:#f8fafc; padding:3px; }
   #filterRow input { width:100%; min-width:0; box-sizing:border-box; padding:5px 6px; border:1px solid #cbd5e1;
@@ -48,7 +48,8 @@
       <option value="none">비기능성만</option>
     </select>
     <button id="clearBtn" type="button">검색 초기화</button>
-    <button id="dlBtn" type="button">⬇ 엑셀 다운로드</button>
+    <button id="xlsxBtn" type="button">⬇ 엑셀 다운로드(.xlsx)</button>
+    <button id="dlBtn" type="button">검색결과 CSV</button>
     <span class="count" id="count"></span>
   </div>
 </header>
@@ -175,6 +176,17 @@ function downloadCSV(){
   a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
 }
 document.getElementById("dlBtn").addEventListener("click", downloadCSV);
+// 엑셀(.xlsx) 다운로드: Supabase의 서식 적용 전체 파일을 받아 저장
+const XLSX_URL="https://qvyrbsfimrjvfrdpuswc.supabase.co/storage/v1/object/public/item-info/item-info.xlsx";
+document.getElementById("xlsxBtn").addEventListener("click", ()=>{
+  const btn=document.getElementById("xlsxBtn"), old=btn.textContent; btn.textContent="받는 중…"; btn.disabled=true;
+  fetch(XLSX_URL,{cache:"no-store"}).then(r=>r.blob()).then(b=>{
+    const d=new Date(), pad=n=>String(n).padStart(2,"0");
+    const a=document.createElement("a"); a.href=URL.createObjectURL(b);
+    a.download=`품목정보_${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}.xlsx`;
+    a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+  }).catch(e=>alert("엑셀 다운로드 실패: "+e)).finally(()=>{ btn.textContent=old; btn.disabled=false; });
+});
 document.getElementById("filterFunc").addEventListener("change", render);
 document.getElementById("clearBtn").addEventListener("click", ()=>{
   COLS.forEach(c=>colInputs[c.key].value=""); document.getElementById("filterFunc").value="all"; render();
