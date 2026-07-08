@@ -24,24 +24,36 @@
   .func { color:var(--accent); font-weight:600; }
   .none { color:#94a3b8; }
   .empty { text-align:center; color:var(--mut); padding:40px; }
+  .hint { color:var(--mut); font-size:12px; flex:1; min-width:180px; }
+  #clearBtn { padding:9px 12px; border:1px solid var(--bd); border-radius:8px; background:#fff; cursor:pointer; font-size:13px; }
+  #clearBtn:hover { background:#f1f5f9; }
+  #head th { top:0; }
+  #filterRow th { position:sticky; top:33px; background:#f8fafc; padding:3px; }
+  #filterRow input { width:100%; box-sizing:border-box; padding:5px 6px; border:1px solid #cbd5e1;
+                     border-radius:5px; font-size:12px; font-weight:normal; }
+  #filterRow input:focus { outline:2px solid var(--accent); border-color:var(--accent); }
 </style>
 </head>
 <body>
 <header>
   <h1>품목정보 조회 <span class="meta" id="meta"></span></h1>
   <div class="controls">
-    <input type="search" id="q" placeholder="품목코드 · 품목명 · 내용물코드 검색…" autofocus>
+    <span class="hint">각 열 제목 아래 칸에 입력하면 그 항목만 검색됩니다 (여러 칸 동시 사용=AND).</span>
     <select id="filterFunc">
-      <option value="all">전체</option>
+      <option value="all">기능성: 전체</option>
       <option value="func">기능성만</option>
       <option value="none">비기능성만</option>
     </select>
+    <button id="clearBtn" type="button">검색 초기화</button>
     <span class="count" id="count"></span>
   </div>
 </header>
 <div class="wrap">
   <table id="tbl">
-    <thead><tr id="head"></tr></thead>
+    <thead>
+      <tr id="head"></tr>
+      <tr id="filterRow"></tr>
+    </thead>
     <tbody id="body"></tbody>
   </table>
   <div class="empty" id="empty" style="display:none">검색 결과가 없습니다.</div>
@@ -86,19 +98,31 @@ let sortKey=null, sortAsc=true;
 
 document.getElementById("meta").textContent = `(총 ${DATA.count||DATA.rows.length}건)`;
 const head=document.getElementById("head");
-COLS.forEach(c=>{ const th=document.createElement("th"); th.textContent=c.label;
+const filterRow=document.getElementById("filterRow");
+const colInputs={};
+COLS.forEach(c=>{
+  const th=document.createElement("th"); th.textContent=c.label+" ▲▼";
+  th.title="클릭하면 이 열로 정렬";
   th.onclick=()=>{ if(sortKey===c.key){sortAsc=!sortAsc;} else {sortKey=c.key;sortAsc=true;} render(); };
-  head.appendChild(th); });
+  head.appendChild(th);
+  const fth=document.createElement("th");
+  const inp=document.createElement("input");
+  inp.type="search"; inp.placeholder=c.label+" 검색";
+  inp.addEventListener("input", render);
+  colInputs[c.key]=inp; fth.appendChild(inp); filterRow.appendChild(fth);
+});
 
 function esc(s){ return String(s).replace(/[&<>]/g, m=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[m])); }
 function hl(s, q){ s=esc(s); if(!q) return s;
   try{ return s.replace(new RegExp("("+q.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+")","ig"),"<mark>$1</mark>"); }catch(e){ return s; } }
 
 function render(){
-  const q=document.getElementById("q").value.trim().toLowerCase();
   const ff=document.getElementById("filterFunc").value;
+  // 각 열별 검색어 수집 (빈 칸은 무시)
+  const terms={};
+  COLS.forEach(c=>{ const v=colInputs[c.key].value.trim().toLowerCase(); if(v) terms[c.key]=v; });
   let rows=DATA.rows.filter(r=>{
-    if(q && !(r.code+" "+r.name+" "+r.content_code).toLowerCase().includes(q)) return false;
+    for(const k in terms){ if(!String(r[k]||"").toLowerCase().includes(terms[k])) return false; }
     if(ff==="func" && !isFunc(r.criteria)) return false;
     if(ff==="none" && isFunc(r.criteria)) return false;
     return true;
@@ -110,18 +134,19 @@ function render(){
     const tr=document.createElement("tr");
     COLS.forEach(c=>{ const td=document.createElement("td");
       let v=r[c.key]||"";
-      if(c.key==="criteria"){ td.innerHTML=hl(v,q); td.className=isFunc(v)?"func":"none"; }
-      else td.innerHTML=hl(v,q);
+      td.innerHTML=hl(v, terms[c.key]||"");
+      if(c.key==="criteria") td.className=isFunc(v)?"func":"none";
       tr.appendChild(td); });
     body.appendChild(tr);
   });
   document.getElementById("empty").style.display = rows.length? "none":"block";
-  const shown=Math.min(rows.length,1000);
   document.getElementById("count").textContent =
      `${rows.length}건${rows.length>1000?" (1000건만 표시)":""}`;
 }
-document.getElementById("q").addEventListener("input", render);
 document.getElementById("filterFunc").addEventListener("change", render);
+document.getElementById("clearBtn").addEventListener("click", ()=>{
+  COLS.forEach(c=>colInputs[c.key].value=""); document.getElementById("filterFunc").value="all"; render();
+});
 render();
 }
 </script>
