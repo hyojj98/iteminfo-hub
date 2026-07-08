@@ -7,15 +7,15 @@
 <style>
   :root { --bd:#e2e8f0; --mut:#64748b; --accent:#2563eb; --bg:#f8fafc; }
   * { box-sizing: border-box; }
-  body { margin:0; font-family: system-ui, "Malgun Gothic", sans-serif; color:#0f172a; background:var(--bg); }
-  header { position:sticky; top:0; background:#fff; border-bottom:1px solid var(--bd); padding:14px 18px; z-index:10; }
+  body { margin:0; font-family: system-ui, "Malgun Gothic", sans-serif; color:#0f172a; background:var(--bg);
+         display:flex; flex-direction:column; height:100vh; }
+  header { flex:none; background:#fff; border-bottom:1px solid var(--bd); padding:14px 18px; z-index:10; }
   h1 { font-size:18px; margin:0 0 10px; }
   .meta { color:var(--mut); font-size:12px; font-weight:normal; }
   .controls { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
-  input[type=search]{ flex:1; min-width:200px; padding:10px 12px; border:1px solid var(--bd); border-radius:8px; font-size:15px; }
   select { padding:10px; border:1px solid var(--bd); border-radius:8px; font-size:14px; }
   .count { color:var(--mut); font-size:13px; white-space:nowrap; }
-  .wrap { overflow-x:auto; padding:0 18px 40px; }
+  .wrap { flex:1 1 auto; overflow:auto; padding:0 18px 40px; }
   table { border-collapse:collapse; width:100%; font-size:13px; background:#fff; table-layout:fixed; }
   th, td { border:1px solid var(--bd); padding:7px 9px; text-align:left; vertical-align:top;
            white-space:pre-wrap; word-break:break-word; }
@@ -32,8 +32,8 @@
   #dlBtn:hover { background:#f0fdf4; }
   #head th { top:0; }
   #filterRow th { position:sticky; top:33px; background:#f8fafc; padding:3px; }
-  #filterRow input { width:100%; box-sizing:border-box; padding:5px 6px; border:1px solid #cbd5e1;
-                     border-radius:5px; font-size:12px; font-weight:normal; }
+  #filterRow input { width:100%; min-width:0; box-sizing:border-box; padding:5px 6px; border:1px solid #cbd5e1;
+                     border-radius:5px; font-size:12px; font-weight:normal; -webkit-appearance:none; appearance:none; }
   #filterRow input:focus { outline:2px solid var(--accent); border-color:var(--accent); }
 </style>
 </head>
