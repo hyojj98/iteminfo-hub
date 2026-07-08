@@ -204,7 +204,7 @@ async function downloadXLSX(){
   try{
     await loadExcelJS();
     const wb=new ExcelJS.Workbook();
-    const ws=wb.addWorksheet("품목정보", {views:[{state:"frozen", ySplit:1}]});
+    const ws=wb.addWorksheet("품목정보", {views:[{state:"frozen", ySplit:1, zoomScale:85, zoomScaleNormal:85}]});
     ws.columns=XLSX_COLS.map(c=>({header:c.h, width:c.w}));
     const hr=ws.getRow(1); hr.height=33;
     hr.eachCell(c=>{ c.font={name:"맑은 고딕",size:11,bold:true};
