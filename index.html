@@ -102,7 +102,8 @@ function isFunc(crit){
 }
 let sortKey=null, sortAsc=true, lastRows=[];
 
-document.getElementById("meta").textContent = `(총 ${DATA.count||DATA.rows.length}건)`;
+document.getElementById("meta").textContent =
+  `(총 ${DATA.count||DATA.rows.length}건${DATA.generated_at ? " · 업데이트 "+DATA.generated_at : ""})`;
 const head=document.getElementById("head");
 const filterRow=document.getElementById("filterRow");
 const colInputs={};
@@ -176,17 +177,58 @@ function downloadCSV(){
   a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
 }
 document.getElementById("dlBtn").addEventListener("click", downloadCSV);
-// 엑셀(.xlsx) 다운로드: Supabase의 서식 적용 전체 파일을 받아 저장
-const XLSX_URL="https://qvyrbsfimrjvfrdpuswc.supabase.co/storage/v1/object/public/item-info/item-info.xlsx";
-document.getElementById("xlsxBtn").addEventListener("click", ()=>{
-  const btn=document.getElementById("xlsxBtn"), old=btn.textContent; btn.textContent="받는 중…"; btn.disabled=true;
-  fetch(XLSX_URL,{cache:"no-store"}).then(r=>r.blob()).then(b=>{
+
+// 엑셀(.xlsx) 다운로드: 브라우저에서 ExcelJS로 직접 생성(서식 포함, 전체 데이터)
+function loadExcelJS(){
+  return new Promise((res,rej)=>{
+    if(window.ExcelJS) return res();
+    const s=document.createElement("script");
+    s.src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js";
+    s.onload=()=>res(); s.onerror=()=>rej(new Error("엑셀 라이브러리 로드 실패(인터넷 확인)"));
+    document.head.appendChild(s);
+  });
+}
+const XLSX_COLS=[
+  {h:"품목코드", k:"code", w:14},
+  {h:"품목명", k:"name", w:71.25},
+  {h:"제형", k:"form", w:14.5},
+  {h:"기능성 기준", k:"criteria", w:31.6},
+  {h:"이미 삼사받은 품목의 제품명", k:"approved", w:36.75},
+  {h:"품목상태", k:"status", w:9},
+  {h:"내용물코드", k:"__code", w:15.25},
+  {h:"내용물명", k:"__name", w:40},
+];
+async function downloadXLSX(){
+  const btn=document.getElementById("xlsxBtn"), old=btn.textContent;
+  btn.textContent="엑셀 만드는 중…"; btn.disabled=true;
+  try{
+    await loadExcelJS();
+    const wb=new ExcelJS.Workbook();
+    const ws=wb.addWorksheet("품목정보", {views:[{state:"frozen", ySplit:1}]});
+    ws.columns=XLSX_COLS.map(c=>({header:c.h, width:c.w}));
+    const hr=ws.getRow(1); hr.height=33;
+    hr.eachCell(c=>{ c.font={name:"맑은 고딕",size:11,bold:true};
+      c.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FFC8E4F3"}};
+      c.alignment={horizontal:"left",vertical:"middle"}; });
+    DATA.rows.forEach(r=>{
+      const codes=(r.content_codes&&r.content_codes.length)?r.content_codes:[""];
+      const names=r.content_names||[];
+      codes.forEach((code,i)=>{
+        const row=ws.addRow([r.code,r.name,r.form,r.criteria,r.approved,r.status,code,names[i]||""]);
+        row.height=33;
+        row.eachCell(c=>{ c.font={name:"맑은 고딕",size:11}; c.alignment={vertical:"middle"}; });
+      });
+    });
+    const buf=await wb.xlsx.writeBuffer();
+    const blob=new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
     const d=new Date(), pad=n=>String(n).padStart(2,"0");
-    const a=document.createElement("a"); a.href=URL.createObjectURL(b);
+    const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
     a.download=`품목정보_${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}.xlsx`;
-    a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
-  }).catch(e=>alert("엑셀 다운로드 실패: "+e)).finally(()=>{ btn.textContent=old; btn.disabled=false; });
-});
+    a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1500);
+  }catch(e){ alert("엑셀 생성 실패: "+e.message); }
+  finally{ btn.textContent=old; btn.disabled=false; }
+}
+document.getElementById("xlsxBtn").addEventListener("click", downloadXLSX);
 document.getElementById("filterFunc").addEventListener("change", render);
 document.getElementById("clearBtn").addEventListener("click", ()=>{
   COLS.forEach(c=>colInputs[c.key].value=""); document.getElementById("filterFunc").value="all"; render();
