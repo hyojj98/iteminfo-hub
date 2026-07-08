@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>품목정보 조회</title>
+<title>✔️ 품목정보</title>
 <style>
   :root { --bd:#e2e8f0; --mut:#64748b; --accent:#2563eb; --bg:#f8fafc; }
   * { box-sizing: border-box; }
@@ -26,8 +26,10 @@
   .none { color:#94a3b8; }
   .empty { text-align:center; color:var(--mut); padding:40px; }
   .hint { color:var(--mut); font-size:12px; flex:1; min-width:180px; }
-  #clearBtn { padding:9px 12px; border:1px solid var(--bd); border-radius:8px; background:#fff; cursor:pointer; font-size:13px; }
+  #clearBtn, #dlBtn { padding:9px 12px; border:1px solid var(--bd); border-radius:8px; background:#fff; cursor:pointer; font-size:13px; }
   #clearBtn:hover { background:#f1f5f9; }
+  #dlBtn { border-color:#16a34a; color:#16a34a; font-weight:600; }
+  #dlBtn:hover { background:#f0fdf4; }
   #head th { top:0; }
   #filterRow th { position:sticky; top:33px; background:#f8fafc; padding:3px; }
   #filterRow input { width:100%; box-sizing:border-box; padding:5px 6px; border:1px solid #cbd5e1;
@@ -37,7 +39,7 @@
 </head>
 <body>
 <header>
-  <h1>품목정보 조회 <span class="meta" id="meta"></span></h1>
+  <h1>✔️품목정보<span class="meta" id="meta"></span></h1>
   <div class="controls">
     <span class="hint">각 열 제목 아래 칸에 입력하면 그 항목만 검색됩니다 (여러 칸 동시 사용=AND).</span>
     <select id="filterFunc">
@@ -46,6 +48,7 @@
       <option value="none">비기능성만</option>
     </select>
     <button id="clearBtn" type="button">검색 초기화</button>
+    <button id="dlBtn" type="button">⬇ 엑셀 다운로드</button>
     <span class="count" id="count"></span>
   </div>
 </header>
@@ -96,7 +99,7 @@ function isFunc(crit){
   }
   return false;
 }
-let sortKey=null, sortAsc=true;
+let sortKey=null, sortAsc=true, lastRows=[];
 
 document.getElementById("meta").textContent = `(총 ${DATA.count||DATA.rows.length}건)`;
 const head=document.getElementById("head");
@@ -136,6 +139,7 @@ function render(){
   });
   if(sortKey) rows.sort((a,b)=>{ const x=(a[sortKey]||""),y=(b[sortKey]||"");
     return (x>y?1:x<y?-1:0)*(sortAsc?1:-1); });
+  lastRows=rows;   // 현재 검색 결과(다운로드용)
   const body=document.getElementById("body"); body.innerHTML="";
   rows.slice(0,1000).forEach(r=>{
     const tr=document.createElement("tr");
@@ -150,6 +154,27 @@ function render(){
   document.getElementById("count").textContent =
      `${rows.length}건${rows.length>1000?" (1000건만 표시)":""}`;
 }
+// 엑셀 다운로드: 현재 검색결과를 '한 셀에 한 값'(내용물코드마다 행 분리)으로 CSV 저장
+function csvCell(v){ v=String(v==null?"":v); return /[",\n\r]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v; }
+function downloadCSV(){
+  const base=COLS.filter(c=>c.key!=="content_code"&&c.key!=="content_name");
+  const lines=[ base.map(c=>c.label).concat(["내용물코드","내용물명"]).map(csvCell).join(",") ];
+  lastRows.forEach(r=>{
+    const codes=(r.content_codes&&r.content_codes.length)?r.content_codes:[""];
+    const names=r.content_names||[];
+    codes.forEach((code,i)=>{
+      lines.push( base.map(c=>csvCell(r[c.key]||"")).concat([csvCell(code),csvCell(names[i]||"")]).join(",") );
+    });
+  });
+  const csv="﻿"+lines.join("\r\n");
+  const blob=new Blob([csv],{type:"text/csv;charset=utf-8"});
+  const d=new Date(), pad=n=>String(n).padStart(2,"0");
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download=`품목정보_${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}.csv`;
+  a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+document.getElementById("dlBtn").addEventListener("click", downloadCSV);
 document.getElementById("filterFunc").addEventListener("change", render);
 document.getElementById("clearBtn").addEventListener("click", ()=>{
   COLS.forEach(c=>colInputs[c.key].value=""); document.getElementById("filterFunc").value="all"; render();
