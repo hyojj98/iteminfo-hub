@@ -53,11 +53,17 @@
            background:#0f172a; color:#fff; padding:8px 16px; border-radius:8px; font-size:13px;
            opacity:0; pointer-events:none; transition:.2s ease; z-index:50; }
   #toast.show { opacity:.95; transform:translateX(-50%) translateY(0); }
+  /* 내용물 이름 미매칭 알림 배너 */
+  #missingBanner { display:none; margin-top:9px; padding:8px 13px; border-radius:8px;
+    background:#fff7ed; color:#c2410c; border:1px solid #fed7aa; font-size:13px; font-weight:600;
+    cursor:help; }
+  #missingBanner b { color:#9a3412; }
 </style>
 </head>
 <body>
 <header>
   <h1>✔️ 품목정보 <span class="meta" id="meta"></span></h1>
+  <div id="missingBanner"></div>
   <div class="controls">
     <span class="hint">열 제목 아래 칸에 입력해 검색(여러 칸=AND) · <b>셀을 클릭하면 값이 복사</b>돼요.</span>
     <select id="filterFunc">
@@ -123,6 +129,20 @@ let sortKey=null, sortAsc=true, lastRows=[];
 
 document.getElementById("meta").textContent =
   `(총 ${DATA.count||DATA.rows.length}건${DATA.generated_at ? " · 업데이트 "+DATA.generated_at : ""})`;
+// 내용물 이름 미매칭 알림 배너 (발행 데이터의 unmatched_count 사용)
+(function(){
+  const mb=document.getElementById("missingBanner");
+  if(!mb) return;
+  const uc=DATA.unmatched_count||0;
+  if(uc>0){
+    const codes=DATA.unmatched_codes||[];
+    mb.innerHTML=`⚠ 이름 없는 내용물코드 <b>${uc}건</b> — 확인이 필요해요`;
+    if(codes.length) mb.title="해당 내용물코드: "+codes.join(", ");
+    mb.style.display="block";
+  } else {
+    mb.style.display="none";
+  }
+})();
 const head=document.getElementById("head");
 const filterRow=document.getElementById("filterRow");
 const colInputs={};
