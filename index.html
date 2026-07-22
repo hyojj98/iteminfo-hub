@@ -222,8 +222,11 @@ async function makeXLSX(rows, label, btn){
       const names=r.content_names||[];
       codes.forEach((code,i)=>{
         const row=ws.addRow([r.code,r.name,r.form,r.criteria,r.approved,code,names[i]||""]);
-        row.height=33;
-        row.eachCell(c=>{ c.font={name:"맑은 고딕",size:11}; c.alignment={vertical:"middle"}; });
+        // 기능성 기준(4열)은 성분별 원료 추가투입이 줄바꿈돼 있음 → 셀 줄바꿈 표시 + 줄 수만큼 행 높이
+        const critLines=String(r.criteria==null?"":r.criteria).split("\n").length;
+        row.height=Math.max(33, critLines*16);
+        row.eachCell((c,col)=>{ c.font={name:"맑은 고딕",size:11};
+          c.alignment={vertical:"middle", wrapText: col===4}; });
       });
     });
     const buf=await wb.xlsx.writeBuffer();
