@@ -111,7 +111,6 @@ const COLS = [
   {key:"form",  label:"제형", w:"120px"},
   {key:"criteria", label:"기능성 기준", w:"210px"},
   {key:"approved", label:"이미 삼사받은 품목의 제품명", w:"170px"},
-  {key:"status", label:"품목상태", w:"88px"},
   {key:"content_code", label:"내용물코드", w:"120px"},
   {key:"content_name", label:"내용물명", w:"300px"},
 ];
@@ -186,13 +185,8 @@ function render(){
     const tr=document.createElement("tr");
     COLS.forEach(c=>{ const td=document.createElement("td");
       let v=r[c.key]||"";
-      if(c.key==="status" && v){
-        const cls = v.includes("확정")?"ok" : v.includes("단종")?"dead" : "other";
-        td.innerHTML=`<span class="badge ${cls}">${hl(v, terms[c.key]||"")}</span>`;
-      } else {
-        td.innerHTML=hl(v, terms[c.key]||"");
-        if(c.key==="criteria") td.className=isFunc(v)?"func":"none";
-      }
+      td.innerHTML=hl(v, terms[c.key]||"");
+      if(c.key==="criteria") td.className=isFunc(v)?"func":"none";
       tr.appendChild(td); });
     body.appendChild(tr);
   });
@@ -210,8 +204,8 @@ function loadExcelJS(){
     document.head.appendChild(s);
   });
 }
-const XLSX_W=[14,71.25,14.5,31.6,36.75,9,15.25,40];
-const XLSX_H=["품목코드","품목명","제형","기능성 기준","이미 삼사받은 품목의 제품명","품목상태","내용물코드","내용물명"];
+const XLSX_W=[14,71.25,14.5,31.6,36.75,15.25,40];
+const XLSX_H=["품목코드","품목명","제형","기능성 기준","이미 삼사받은 품목의 제품명","내용물코드","내용물명"];
 async function makeXLSX(rows, label, btn){
   const old=btn.textContent; btn.textContent="엑셀 만드는 중…"; btn.disabled=true;
   try{
@@ -227,7 +221,7 @@ async function makeXLSX(rows, label, btn){
       const codes=(r.content_codes&&r.content_codes.length)?r.content_codes:[""];
       const names=r.content_names||[];
       codes.forEach((code,i)=>{
-        const row=ws.addRow([r.code,r.name,r.form,r.criteria,r.approved,r.status,code,names[i]||""]);
+        const row=ws.addRow([r.code,r.name,r.form,r.criteria,r.approved,code,names[i]||""]);
         row.height=33;
         row.eachCell(c=>{ c.font={name:"맑은 고딕",size:11}; c.alignment={vertical:"middle"}; });
       });
