@@ -136,7 +136,7 @@
   // ── 열람 비밀번호 게이트(웹 화면만 가벼운 잠금) ──
   //  ※ 비번은 평문 대신 SHA-256 해시로만 둠. 데이터 URL 자체는 공개이므로 '완전한 보안'은 아님.
   (function(){
-    var PW_HASH="26eca6e30ec3b930810926f34f8983375385c111dccefea517e360fdb8159f04"; // imineqm
+    var PW_HASH="26eca6e30ec3b930810926f34f8983375385c111dccefea517e360fdb8159f04"; // 공용 비번의 SHA-256 (평문 미포함)
     var KEY="iteminfo_auth_v1";
     var gate=document.getElementById("gate");
     var isFile=(location.protocol==="file:");
