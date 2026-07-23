@@ -58,9 +58,35 @@
     background:#fff7ed; color:#c2410c; border:1px solid #fed7aa; font-size:13px; font-weight:600;
     cursor:help; }
   #missingBanner b { color:#9a3412; }
+  /* 열람 비밀번호 게이트 */
+  body.locked { overflow:hidden; }
+  #gate { position:fixed; inset:0; z-index:1000; background:var(--bg); display:none;
+    align-items:center; justify-content:center; }
+  #gate form { background:#fff; border:1px solid var(--bd); border-radius:14px; padding:28px 26px;
+    width:min(90vw,340px); box-shadow:0 8px 30px rgba(0,0,0,.08); text-align:center; }
+  #gate h2 { margin:0 0 6px; font-size:20px; }
+  #gate p { margin:0 0 16px; color:var(--mut); font-size:13px; }
+  #gatePw { width:100%; padding:11px 12px; border:1px solid #cbd5e1; border-radius:9px; font-size:15px; }
+  #gatePw:focus { outline:2px solid var(--accent); border-color:var(--accent); }
+  #gate button { width:100%; margin-top:10px; padding:11px; border:none; border-radius:9px;
+    background:var(--accent); color:#fff; font-size:15px; font-weight:600; cursor:pointer; }
+  #gate button:hover { background:#1d4ed8; }
+  #gateErr { display:none; color:#dc2626; font-size:13px; margin-top:10px; }
+  #logoutBtn { padding:9px 12px; border:1px solid var(--bd); border-radius:8px; background:#fff;
+    cursor:pointer; font-size:13px; }
+  #logoutBtn:hover { background:#f1f5f9; }
 </style>
 </head>
 <body>
+<div id="gate">
+  <form id="gateForm">
+    <h2>🔒 품목정보</h2>
+    <p>열람 비밀번호를 입력하세요.</p>
+    <input id="gatePw" type="password" placeholder="비밀번호" autocomplete="current-password">
+    <button type="submit">들어가기</button>
+    <div id="gateErr">비밀번호가 틀렸어요.</div>
+  </form>
+</div>
 <header>
   <h1>✔️ 품목정보 <span class="meta" id="meta"></span></h1>
   <div id="missingBanner"></div>
@@ -75,6 +101,7 @@
     <button id="xlsxAll" type="button">⬇ 엑셀(전체)</button>
     <button id="xlsxHit" type="button">⬇ 엑셀(검색결과)</button>
     <span class="count" id="count"></span>
+    <button id="logoutBtn" type="button" style="display:none">🔒 로그아웃</button>
   </div>
 </header>
 <div class="wrap">
@@ -94,13 +121,52 @@
   window.__DATAJS__ = "https://qvyrbsfimrjvfrdpuswc.supabase.co/storage/v1/object/public/item-info/data.js";
 </script>
 <script>
-  // 같은 폴더에 data.js 있으면 로컬 우선, 없으면 Supabase에서 로드
-  var s=document.createElement("script");
-  s.src = (location.protocol==="file:") ? "data.js" : window.__DATAJS__;
-  s.onerror = function(){ var f=document.createElement("script"); f.src=window.__DATAJS__; f.onload=boot; document.head.appendChild(f); };
-  s.onload = boot;
-  document.head.appendChild(s);
-  function boot(){ if(window.__booted) return; window.__booted=true; init(); }
+  // ── 데이터 로더: 인증 통과 후에만 실행 ──
+  function startApp(){
+    if(window.__started) return; window.__started=true;
+    // 같은 폴더에 data.js 있으면 로컬 우선, 없으면 Supabase에서 로드
+    var s=document.createElement("script");
+    s.src = (location.protocol==="file:") ? "data.js" : window.__DATAJS__;
+    s.onerror = function(){ var f=document.createElement("script"); f.src=window.__DATAJS__; f.onload=boot; document.head.appendChild(f); };
+    s.onload = boot;
+    document.head.appendChild(s);
+    function boot(){ if(window.__booted) return; window.__booted=true; init(); }
+  }
+
+  // ── 열람 비밀번호 게이트(웹 화면만 가벼운 잠금) ──
+  //  ※ 비번은 평문 대신 SHA-256 해시로만 둠. 데이터 URL 자체는 공개이므로 '완전한 보안'은 아님.
+  (function(){
+    var PW_HASH="26eca6e30ec3b930810926f34f8983375385c111dccefea517e360fdb8159f04"; // imineqm
+    var KEY="iteminfo_auth_v1";
+    var gate=document.getElementById("gate");
+    var isFile=(location.protocol==="file:");
+    function unlock(){
+      gate.style.display="none"; document.body.classList.remove("locked");
+      if(!isFile){ var lo=document.getElementById("logoutBtn"); if(lo) lo.style.display=""; }
+      startApp();
+    }
+    // 로그아웃 버튼
+    var lo=document.getElementById("logoutBtn");
+    if(lo) lo.addEventListener("click", function(){ try{localStorage.removeItem(KEY);}catch(e){} location.reload(); });
+    // 로컬 파일(본인 PC) 또는 이미 인증된 브라우저 → 바로 진입
+    var saved=""; try{ saved=localStorage.getItem(KEY)||""; }catch(e){}
+    if(isFile || saved===PW_HASH){ unlock(); return; }
+    // 잠금 화면 표시
+    document.body.classList.add("locked"); gate.style.display="flex";
+    setTimeout(function(){ var i=document.getElementById("gatePw"); if(i) i.focus(); }, 50);
+    async function sha256(t){
+      var b=await crypto.subtle.digest("SHA-256", new TextEncoder().encode(t));
+      return Array.from(new Uint8Array(b)).map(function(x){return x.toString(16).padStart(2,"0");}).join("");
+    }
+    document.getElementById("gateForm").addEventListener("submit", async function(e){
+      e.preventDefault();
+      var pw=document.getElementById("gatePw").value;
+      var h; try{ h=await sha256(pw); }catch(err){ h=null; }
+      if(h===PW_HASH){ try{localStorage.setItem(KEY,h);}catch(e){} unlock(); }
+      else { document.getElementById("gateErr").style.display="block";
+             var i=document.getElementById("gatePw"); i.select(); }
+    });
+  })();
 </script>
 <script>
 function init(){
