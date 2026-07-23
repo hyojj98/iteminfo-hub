@@ -146,6 +146,10 @@ const head=document.getElementById("head");
 const filterRow=document.getElementById("filterRow");
 const colInputs={};
 const colTh={};
+// 표에 그릴 최대 행수(전체 데이터보다 크게 잡아 사실상 전부 표시). 검색 입력은 디바운스로 부드럽게.
+const MAX_ROWS = 20000;
+function debounce(fn, ms){ let t; return function(){ clearTimeout(t); t=setTimeout(fn, ms); }; }
+const renderDebounced = debounce(render, 140);
 COLS.forEach(c=>{
   const th=document.createElement("th"); th.textContent=c.label;
   th.title="클릭하면 이 열로 정렬"; colTh[c.key]=th;
@@ -156,7 +160,7 @@ COLS.forEach(c=>{
   if(c.w) fth.style.width=c.w;
   const inp=document.createElement("input");
   inp.type="search"; inp.placeholder=c.label+" 검색";
-  inp.addEventListener("input", render);
+  inp.addEventListener("input", renderDebounced);
   colInputs[c.key]=inp; fth.appendChild(inp); filterRow.appendChild(fth);
 });
 
@@ -180,19 +184,22 @@ function render(){
   if(sortKey) rows.sort((a,b)=>{ const x=(a[sortKey]||""),y=(b[sortKey]||"");
     return (x>y?1:x<y?-1:0)*(sortAsc?1:-1); });
   lastRows=rows;   // 현재 검색 결과(다운로드용)
-  const body=document.getElementById("body"); body.innerHTML="";
-  rows.slice(0,1000).forEach(r=>{
+  const body=document.getElementById("body");
+  const frag=document.createDocumentFragment();   // 화면 밖에서 한 번에 만들어 붙이기(빠름)
+  rows.slice(0,MAX_ROWS).forEach(r=>{
     const tr=document.createElement("tr");
     COLS.forEach(c=>{ const td=document.createElement("td");
       let v=r[c.key]||"";
       td.innerHTML=hl(v, terms[c.key]||"");
       if(c.key==="criteria") td.className=isFunc(v)?"func":"none";
       tr.appendChild(td); });
-    body.appendChild(tr);
+    frag.appendChild(tr);
   });
+  body.innerHTML="";
+  body.appendChild(frag);
   document.getElementById("empty").style.display = rows.length? "none":"block";
   document.getElementById("count").textContent =
-     `${rows.length}건${rows.length>1000?" (1000건만 표시)":""}`;
+     `${rows.length}건${rows.length>MAX_ROWS?` (${MAX_ROWS}건만 표시)`:""}`;
 }
 // 엑셀(.xlsx) 다운로드: 브라우저에서 ExcelJS로 직접 생성(서식 포함). 전체/검색결과 두 가지.
 function loadExcelJS(){
