@@ -110,7 +110,7 @@ const COLS = [
   {key:"name",  label:"품목명", w:"320px"},
   {key:"form",  label:"제형", w:"120px"},
   {key:"criteria", label:"기능성 기준", w:"210px"},
-  {key:"approved", label:"이미 삼사받은 품목의 제품명", w:"170px"},
+  {key:"approved", label:"이미 심사받은 품목의 제품명", w:"170px"},
   {key:"content_code", label:"내용물코드", w:"120px"},
   {key:"content_name", label:"내용물명", w:"300px"},
 ];
@@ -205,7 +205,7 @@ function loadExcelJS(){
   });
 }
 const XLSX_W=[14,71.25,14.5,31.6,36.75,15.25,40];
-const XLSX_H=["품목코드","품목명","제형","기능성 기준","이미 삼사받은 품목의 제품명","내용물코드","내용물명"];
+const XLSX_H=["품목코드","품목명","제형","기능성 기준","이미 심사받은 품목의 제품명","내용물코드","내용물명"];
 async function makeXLSX(rows, label, btn){
   const old=btn.textContent; btn.textContent="엑셀 만드는 중…"; btn.disabled=true;
   try{
